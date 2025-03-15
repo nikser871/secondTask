@@ -29,10 +29,11 @@ public class OrderRepositoryImpl implements OrderRepository {
     @Override
     public void writeOrdersToOutputStream(OutputStream outputStream, List<String> orders) {
         try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream))) {
-            orders.stream()
+            orders
                     .forEach(csq -> {
                         try {
                             writer.append(csq);
+                            writer.newLine();
                         } catch (IOException e) {
                             throw new RuntimeException("Произошла ошибка во время записи в файл!", e);
                         }

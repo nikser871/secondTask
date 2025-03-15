@@ -22,25 +22,30 @@ import java.util.stream.Collectors;
 public class OrderServiceImpl implements IOrderService {
 
     private final String PATH = "src/main/resources/";
+    private final String ORDER = "order_";
     private final String NO_DATA_FILE_PATH = PATH + "non_valid_orders.txt";
     OrderRepository orderRepository;
     Mapper mapper;
-    private List<Validator<Order>> validators;
+    private final List<Validator<Order>> validators;
 
     public OrderServiceImpl(OrderRepository orderRepository, Mapper mapper) {
         this.orderRepository = orderRepository;
         this.mapper = mapper;
 
         this.validators = new ArrayList<>();
-        validators.add(new AddressValidatorImpl());
         validators.add(new PhoneNumberValidatorImpl());
+        validators.add(new AddressValidatorImpl());
         validators.add(new NoDataValidatorImpl());
     }
 
     @Override
     public void createFilesWithContent(String fileName, List<String> content) {
         try {
-            orderRepository.writeOrdersToOutputStream(Files.newOutputStream(Path.of(fileName)), content);
+            Path path = Path.of(fileName);
+            if (Files.exists(path))
+                Files.delete(path);
+
+            orderRepository.writeOrdersToOutputStream(Files.newOutputStream(path), content);
         } catch (IOException e) {
             throw new RuntimeException("Произошла ошибка во время записи в файл!", e);
         }
@@ -59,28 +64,42 @@ public class OrderServiceImpl implements IOrderService {
     public void processOrders(String fileName) {
         List<Order> orders = readFile(fileName);
         List<String> noValidOrders = new ArrayList<>();
-        Map<String, List<String>> validOrders;
+        Map<String, List<Order>> validOrders;
 
         validOrders = orders.stream()
                 .filter(order -> {
-                    try {
-                        for (Validator<Order> validator : validators) {
+                    List<OrderException> exceptions = new ArrayList<>();
+                    for (Validator<Order> validator : validators) {
+                        try {
                             validator.isValid(order);
+                        } catch (OrderException e) {
+                            exceptions.add(e);
                         }
-                    } catch (OrderException e) {
-                        noValidOrders.add(OrderUtil.getPresentationOfFailedOrder(order, e.getStatus()));
+                    }
+
+                    if (!exceptions.isEmpty()) {
+                        exceptions.forEach(e -> {
+                            noValidOrders.add(OrderUtil.getPresentationOfFailedOrder(order, e.getStatus()));
+                        });
+
+                        return false;
                     }
                     return true;
                 })
-                .collect(Collectors.groupingBy(OrderUtil::getCountryFromOrder, Collectors.mapping(mapper::toRowData, Collectors.toList())));
+                .collect(Collectors.groupingBy(OrderUtil::getCountryFromOrder,
+                        Collectors.collectingAndThen(Collectors.mapping(order -> order, Collectors.toList()),
+                                list -> list.stream()
+                                        .sorted(Comparator.comparing(OrderUtil::getCountryFromOrder).thenComparing(Order::priority))
+                                        .toList())));
 
         createFilesWithContent(NO_DATA_FILE_PATH, noValidOrders);
 
         validOrders.forEach((key, value) -> {
-            value.stream()
-                    .sorted(Comparator.comparing(OrderUtil::getCountryFromOrder).thenComparing(Order::priority))
-                    .forEach(order ->
-                            createFilesWithContent(PATH + key, value));
+            List<String> ord = value.stream()
+                    .map(mapper::toRowData)
+                    .toList();
+
+            createFilesWithContent(PATH + ORDER + key + ".txt", ord);
         });
     }
 }

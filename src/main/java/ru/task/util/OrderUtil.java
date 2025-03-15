@@ -60,4 +60,8 @@ public final class OrderUtil {
         return order.address().split("\\.")[0];
     }
 
+    public static boolean isBlankOrEmpty(String a) {
+        return a == null || a.trim().isEmpty();
+    }
+
 }
