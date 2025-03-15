@@ -10,12 +10,12 @@ import java.util.List;
 public interface IOrderService {
 
     /**
-     * Создать заполненный файл
+     * Создать заполненный файл.
      *
      * @param fileName имя файла
      * @param content данные
      */
-    void createFileWithContent(String fileName, List<String> content);
+    void createFilesWithContent(String fileName, List<String> content);
 
     /**
      * Прочитать данные о заказах из файла
@@ -25,6 +25,9 @@ public interface IOrderService {
     List<Order> readFile(String fileName);
 
     /**
+     * Запустить процесс обработки заказов
      *
+     * @param fileName Имя файла
      */
+    void processOrders(String fileName);
 }

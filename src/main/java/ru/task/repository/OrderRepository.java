@@ -23,16 +23,7 @@ public interface OrderRepository {
      * Записать в файл список успешных заказов
      *
      * @param outputStream поток на запись
-     * @param orders успешные заказы
+     * @param orders  заказы (успех/неуспех)
      */
-    void writeSuccessOrdersToOutputStream(OutputStream outputStream, List<Order> orders);
-
-    /**
-     * Записать в файл список неудачных заказов
-     *
-     * @param outputStream поток на запись
-     * @param orders заказы с ошибкой
-     */
-    void writeErrorOrdersToOutputStream(OutputStream outputStream, List<Order> orders);
-
+    void writeOrdersToOutputStream(OutputStream outputStream, List<String> orders);
 }
